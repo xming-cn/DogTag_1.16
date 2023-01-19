@@ -3,6 +3,7 @@ package me.kqn.dogtag
 import com.sk89q.worldguard.bukkit.RegionContainer
 import com.sk89q.worldguard.bukkit.WorldGuardPlugin
 import com.sk89q.worldguard.protection.flags.BooleanFlag
+import me.kqn.dogtag.file.ConfigObject
 import me.kqn.dogtag.file.ConfigObject.conf
 import me.kqn.dogtag.file.MessageObject.message
 import org.bukkit.Bukkit
@@ -33,6 +34,7 @@ import taboolib.platform.util.isRightClick
 import taboolib.platform.util.onlinePlayers
 import java.io.File
 import java.util.concurrent.TimeUnit
+import kotlin.math.max
 
 object  DogTag : Plugin() {
 
@@ -86,6 +88,7 @@ object  DogTag : Plugin() {
 
         baffle=Baffle.of(conf.getInt("CoolDown",10).toLong(),TimeUnit.SECONDS)
     }
+
     fun regCmd(){
         command("dogtag"){
             createHelper()
@@ -108,6 +111,34 @@ object  DogTag : Plugin() {
                             sender.sendMessage("&a请输入正确的正整数".colored())
                         }
 
+                    }
+                }
+            }
+            literal("remove"){
+                dynamic ("数量"){
+                    dynamic("玩家名") {
+                        execute<Player>(){
+                            sender, context, argument ->
+                            val amt=context.argument(-1).toIntOrNull()?:return@execute
+                            val player=Bukkit.getPlayer(context.argument(0))?:return@execute
+                            debug(amt.toString()+"  "+player.name)
+                            var points=player.getDataContainer()[pointKey]?.let { it.toInt() }?:return@execute
+                            //var level=player.getDataContainer()[levelKey]?.let{it.toInt()}?:return@execute
+                            var newPoints= max(points-amt,0)
+                            var newLevel=0;
+                            for (key in conf.getConfigurationSection("Levels")!!.getKeys(false)) {
+                                if(conf.getInt("Levels.${key}.exp",0)<=newPoints){
+                                    newLevel=key.toInt()
+
+                                }
+                                else {
+                                    break
+                                }
+                            }
+                            player.getDataContainer()[pointKey]=newPoints
+                            player.getDataContainer()[levelKey]=newLevel
+                            sender.sendMessage("&a已移除${player.name}的${amt}个荣誉点数")
+                        }
                     }
                 }
             }
@@ -134,7 +165,8 @@ object  DogTag : Plugin() {
 
     @SubscribeEvent
     fun playerDeath(e:PlayerDeathEvent){
-        if(e.entity.killer!=null&&e.entity.killer!=e.entity){
+
+        if(e.entity.killer!=null&&e.entity.killer!!.name!=e.entity.name&&e.entity.uniqueId!=e.entity.uniqueId){
             var killer=e.entity.killer!!
             if (worldGuardPlugin != null) {
                 var player=e.entity
@@ -188,9 +220,10 @@ object  DogTag : Plugin() {
                             e.player.getDataContainer()[levelKey] = it//把等级记入数据库
                             var cmds= conf.getStringList("Levels.${it}.command")
                             for (cmd in cmds) {
+                                var tmp=e.player.isOp
                                 e.player.isOp=true
                                 e.player.performCommand(cmd.replace("[player]",e.player.name))//给玩家执行命令
-                                e.player.isOp=false
+                                e.player.isOp=tmp
                             }
                         }
                         else {
