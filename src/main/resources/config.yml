@@ -1,0 +1,40 @@
+debug: false
+Item:
+  name: "&6狗牌"
+  material: NAME_TAG
+  lore:
+    - "&f这是战力荣誉的象征"
+    - "&a右键获得荣誉点数"
+
+
+#同一个玩家掉落狗牌的cd
+CoolDown: 10
+#玩家右键一个狗牌后获得的荣耀点数
+Points: 10
+Levels:
+  1:
+    command:
+      - 'plt give [player] 初出茅庐'
+    #进入1级声望需要的荣誉点数
+    exp: 10
+  2:
+    command: []
+    exp: 20
+  3:
+    command:
+      - 'plt give [player] 进阶'
+    exp: 30
+  4:
+    command: []
+    exp: 40
+
+
+
+database:
+  enable: false
+  host: localhost
+  port: 3306
+  user: root
+  password: root
+  database: root
+  table: my_database

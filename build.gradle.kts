@@ -16,6 +16,11 @@ taboolib {
     install("expansion-player-database")
     classifier = null
     version = "6.0.10-59"
+    description{
+        dependencies{
+            name("WorldGuard")
+        }
+    }
 }
 
 repositories {
