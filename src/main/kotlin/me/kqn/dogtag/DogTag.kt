@@ -31,6 +31,7 @@ import taboolib.module.chat.colored
 import taboolib.module.configuration.Configuration
 import taboolib.platform.util.giveItem
 import taboolib.platform.util.isRightClick
+import taboolib.platform.util.killer
 import taboolib.platform.util.onlinePlayers
 import java.io.File
 import java.util.concurrent.TimeUnit
@@ -126,7 +127,10 @@ object  DogTag : Plugin() {
                             //var level=player.getDataContainer()[levelKey]?.let{it.toInt()}?:return@execute
                             var newPoints= max(points-amt,0)
                             var newLevel=0;
-                            for (key in conf.getConfigurationSection("Levels")!!.getKeys(false)) {
+                            var levels= conf.getConfigurationSection("Levels")!!.getKeys(false).sortedWith(){x,y->
+                                return@sortedWith (x.toIntOrNull()?:0)-(y.toIntOrNull()?:0)
+                            }
+                            for (key in levels) {
                                 if(conf.getInt("Levels.${key}.exp",0)<=newPoints){
                                     newLevel=key.toInt()
 
@@ -151,8 +155,8 @@ object  DogTag : Plugin() {
                             sender.sendMessage("该玩家不存在")
                         }
                         else {
-                            sender.sendMessage("玩家${argument}的荣誉点数为${p.getDataContainer()[pointKey]}")
-                            sender.sendMessage("玩家${argument}的声望等级为${p.getDataContainer()[levelKey]}")
+                            sender.sendMessage("玩家${argument}的荣誉点数为${p.getDataContainer()[pointKey]?:0}")
+                            sender.sendMessage("玩家${argument}的声望等级为${p.getDataContainer()[levelKey]?:0}")
                         }
                     }
 
@@ -165,20 +169,26 @@ object  DogTag : Plugin() {
 
     @SubscribeEvent
     fun playerDeath(e:PlayerDeathEvent){
-
+        debug("name: ${e.entity.name}  uuid: ${e.entity.uniqueId} killer: ${e.killer?.name} killer: ${e.killer?.uniqueId}")
         if(e.entity.killer!=null&&e.entity.killer!!.name!=e.entity.name&&e.entity.uniqueId!=e.entity.uniqueId){
-            var killer=e.entity.killer!!
+            debug("${worldGuardPlugin!=null}")
             if (worldGuardPlugin != null) {
                 var player=e.entity
                 val localPlayer = worldGuardPlugin!!.wrapPlayer(player)
+                debug(player.location.toString())
                 val regions = regionContainer!!.createQuery().getApplicableRegions(player.getLocation())
+
                 val keepInventory = regions.queryValue(localPlayer, Flag.SAFE_AREA)
+                debug(keepInventory?.toString()?:"")
                 if (keepInventory != null && keepInventory==true) {
                     return
                 }
             }
-            if(baffle.hasNext(e.entity.name)){
-                baffle.next(e.entity.name)
+            debug(baffle.hasNext(e.entity.uniqueId.toString()).toString())
+            if(baffle.hasNext(e.entity.uniqueId.toString())){
+                baffle.next(e.entity.uniqueId.toString())
+                debug(e.entity.world.name+"  "+e.entity.location.toString())
+
                 e.entity.world.dropItemNaturally(e.entity.location, dogtag.also { it.amount=1 })
             }
         }
@@ -200,18 +210,22 @@ object  DogTag : Plugin() {
                 var points= conf.getInt("Points")
                 var p= e.player.getDataContainer()[pointKey]
                 if(p==null){
-                    e.player.getDataContainer().set(pointKey,points)//没有这个键
+                    e.player.getDataContainer()[pointKey] = points//没有这个键
                 }
                 else {
-                    e.player.getDataContainer().set(pointKey,p.toInt()+points)//有这个键
+                    e.player.getDataContainer()[pointKey] = p.toInt()+points//有这个键
                 }
                 e.player.sendMessage(message.getString("GET_POINTS","")!!.replace("%amount%",points.toString()).colored())//发送消息，替换占位符
                 //下面判定升级
                 var total= e.player.getDataContainer()[pointKey]!!.toInt()
-                var levels= conf.getConfigurationSection("Levels")!!.getKeys(false)
+                var levels= conf.getConfigurationSection("Levels")!!.getKeys(false).sortedWith(){x,y->
+                    return@sortedWith (x.toIntOrNull()?:0)-(y.toIntOrNull()?:0)
+                }
                 var lvlNow=e.player.getDataContainer()[levelKey]?.toInt()?:0//取现在的等级
+                debug("level: ${levels}")
                 for (it in levels) {
                     var need= conf["Levels.${it}.exp"] as Int
+
                     if(lvlNow<it.toInt()) {
                         if (need <= total) {
                             e.player.sendMessage(
