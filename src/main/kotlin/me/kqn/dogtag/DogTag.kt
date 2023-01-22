@@ -141,7 +141,7 @@ object  DogTag : Plugin() {
                             }
                             player.getDataContainer()[pointKey]=newPoints
                             player.getDataContainer()[levelKey]=newLevel
-                            sender.sendMessage("&a已移除${player.name}的${amt}个荣誉点数")
+                            sender.sendMessage("&a已移除${player.name}的${amt}个荣誉点数".colored())
                         }
                     }
                 }
