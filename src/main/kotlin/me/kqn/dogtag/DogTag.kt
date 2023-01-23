@@ -170,7 +170,10 @@ object  DogTag : Plugin() {
     @SubscribeEvent
     fun playerDeath(e:PlayerDeathEvent){
         debug("name: ${e.entity.name}  uuid: ${e.entity.uniqueId} killer: ${e.killer?.name} killer: ${e.killer?.uniqueId}")
-        if(e.entity.killer!=null&&e.entity.killer!!.name!=e.entity.name&&e.entity.uniqueId!=e.entity.uniqueId){
+        debug((e.entity.killer!=null).toString())
+        debug((e.entity.killer!!.name!=e.entity.name).toString())
+        debug((e.entity.uniqueId.toString()!=e.killer?.uniqueId.toString()).toString())
+        if(e.entity.killer!=null&&e.entity.killer!!.name!=e.entity.name&&e.entity.uniqueId.toString()!=e.killer?.uniqueId.toString()){
             debug("${worldGuardPlugin!=null}")
             if (worldGuardPlugin != null) {
                 var player=e.entity
@@ -184,7 +187,7 @@ object  DogTag : Plugin() {
                     return
                 }
             }
-            debug(baffle.hasNext(e.entity.uniqueId.toString()).toString())
+          //  debug(baffle.hasNext(e.entity.uniqueId.toString()).toString())
             if(baffle.hasNext(e.entity.uniqueId.toString())){
                 baffle.next(e.entity.uniqueId.toString())
                 debug(e.entity.world.name+"  "+e.entity.location.toString())
