@@ -1,13 +1,14 @@
 package me.kqn.dogtag
 
-import com.sk89q.worldguard.bukkit.RegionContainer
+import com.sk89q.worldedit.bukkit.BukkitWorld
+import com.sk89q.worldedit.util.Location
+import com.sk89q.worldguard.WorldGuard
 import com.sk89q.worldguard.bukkit.WorldGuardPlugin
-import com.sk89q.worldguard.protection.flags.BooleanFlag
-import me.kqn.dogtag.file.ConfigObject
+import com.sk89q.worldguard.protection.flags.StateFlag
+import com.sk89q.worldguard.protection.regions.RegionContainer
 import me.kqn.dogtag.file.ConfigObject.conf
 import me.kqn.dogtag.file.MessageObject.message
 import org.bukkit.Bukkit
-import org.bukkit.Bukkit.getPluginManager
 import org.bukkit.Material
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
@@ -21,7 +22,6 @@ import taboolib.common.platform.Plugin
 import taboolib.common.platform.command.command
 import taboolib.common.platform.event.SubscribeEvent
 import taboolib.common.platform.function.getDataFolder
-import taboolib.common.platform.function.info
 import taboolib.common.platform.function.submitAsync
 import taboolib.common5.Baffle
 import taboolib.common5.FileWatcher
@@ -37,13 +37,14 @@ import java.io.File
 import java.util.concurrent.TimeUnit
 import kotlin.math.max
 
+
 object  DogTag : Plugin() {
 
 
-    lateinit var dogtag:ItemStack
-    lateinit var baffle: Baffle
-    lateinit var baffle2: Baffle
-     var confPath="plugins/DogTag/config.yml"
+    private lateinit var dogtag:ItemStack
+    private lateinit var baffle: Baffle
+    private lateinit var baffle2: Baffle
+    private var confPath="plugins/DogTag/config.yml"
     override fun onEnable() {
         baffle2=Baffle.of(500.toLong(),TimeUnit.MILLISECONDS)
         baffle=Baffle.of(conf.getInt("CoolDown",10).toLong(),TimeUnit.SECONDS)
@@ -56,7 +57,7 @@ object  DogTag : Plugin() {
         FileWatcher.INSTANCE.addSimpleListener(File(confPath)){
             reload()
             onlinePlayers.forEach { if (it.isOp){
-            it.sendMessage("&a已自动重载".colored())
+            it.sendMessage("&a?????????".colored())
             }
             }
         }
@@ -68,21 +69,24 @@ object  DogTag : Plugin() {
         baffle2.resetAll()
     }
     private var worldGuardPlugin: WorldGuardPlugin? = null
+    private var worldGuard: WorldGuard? = null
     private var regionContainer: RegionContainer? = null
     override fun onLoad() {
 
-        this.worldGuardPlugin = getPluginManager().getPlugin("WorldGuard") as WorldGuardPlugin
-        val booleanFlag: BooleanFlag = Flag.SAFE_AREA
-        this.regionContainer = worldGuardPlugin!!.regionContainer
+        this.worldGuardPlugin = WorldGuardPlugin.inst()
+        this.worldGuard = WorldGuard.getInstance()
+        val booleanFlag: StateFlag = Flag.SAFE_AREA
+        this.regionContainer = worldGuard!!.platform.regionContainer;
         try {
-            if (worldGuardPlugin!!.flagRegistry.get("DogTag-Safe-Area") != null) return
-            worldGuardPlugin!!.flagRegistry.register(booleanFlag)
+            if (worldGuard!!.flagRegistry.get("DogTag-Safe-Area") != null) return
+            worldGuard!!.flagRegistry.register(booleanFlag)
         } catch (e: Exception) {
             e.printStackTrace()
-            Bukkit.getLogger().warning("[DogTag]未开启WorldGuard,安全区功能将不可用")
+            Bukkit.getLogger().warning("[DogTag] WorldGuard not found, some features will not work")
+
         }
     }
-    fun  reload(){
+    private fun  reload(){
         conf= Configuration.loadFromFile(File(confPath))
         dogtag= conf.getItemStack("Item")?: ItemStack(Material.NAME_TAG)
         baffle.resetAll()
@@ -90,44 +94,44 @@ object  DogTag : Plugin() {
         baffle=Baffle.of(conf.getInt("CoolDown",10).toLong(),TimeUnit.SECONDS)
     }
 
-    fun regCmd(){
+    private fun regCmd(){
         command("dogtag"){
             createHelper()
             literal("reload"){
                 execute<CommandSender>{
-                    sender, context, argument ->
+                        sender, _, _ ->
                     submitAsync { reload()
-                    sender.sendMessage("&a完成")
+                    sender.sendMessage("&a???")
                     }
                 }
             }
             literal("get"){
-                dynamic ("数量"){
+                dynamic ("????"){
                     execute<Player>{
                         sender, context, argument ->
                         if(argument.toIntOrNull()!=null){
                             sender.giveItem(dogtag.clone().apply { amount=argument.toInt() })
                         }
                         else {
-                            sender.sendMessage("&a请输入正确的正整数".colored())
+                            sender.sendMessage("&a?????????????????".colored())
                         }
 
                     }
                 }
             }
             literal("remove"){
-                dynamic ("数量"){
-                    dynamic("玩家名") {
-                        execute<Player>(){
-                            sender, context, argument ->
+                dynamic ("????"){
+                    dynamic("?????") {
+                        execute<Player> {
+                                sender, context, _ ->
                             val amt=context.argument(-1).toIntOrNull()?:return@execute
                             val player=Bukkit.getPlayer(context.argument(0))?:return@execute
                             debug(amt.toString()+"  "+player.name)
-                            var points=player.getDataContainer()[pointKey]?.let { it.toInt() }?:return@execute
+                            val points= player.getDataContainer()[pointKey]?.toInt() ?:return@execute
                             //var level=player.getDataContainer()[levelKey]?.let{it.toInt()}?:return@execute
-                            var newPoints= max(points-amt,0)
+                            val newPoints= max(points-amt,0)
                             var newLevel=0;
-                            var levels= conf.getConfigurationSection("Levels")!!.getKeys(false).sortedWith(){x,y->
+                            val levels= conf.getConfigurationSection("Levels")!!.getKeys(false).sortedWith(){x,y->
                                 return@sortedWith (x.toIntOrNull()?:0)-(y.toIntOrNull()?:0)
                             }
                             for (key in levels) {
@@ -141,22 +145,22 @@ object  DogTag : Plugin() {
                             }
                             player.getDataContainer()[pointKey]=newPoints
                             player.getDataContainer()[levelKey]=newLevel
-                            sender.sendMessage("&a已移除${player.name}的${amt}个荣誉点数".colored())
+                            sender.sendMessage("&a?????${player.name}??${amt}??????????".colored())
                         }
                     }
                 }
             }
             literal("points"){
-                dynamic ("玩家名"){
+                dynamic ("?????"){
                     execute<CommandSender>{
-                        sender, context, argument ->
-                        var p=Bukkit.getPlayer(argument)
+                            sender, _, argument ->
+                        val p=Bukkit.getPlayer(argument)
                         if(p==null){
-                            sender.sendMessage("该玩家不存在")
+                            sender.sendMessage("??????????")
                         }
                         else {
-                            sender.sendMessage("玩家${argument}的荣誉点数为${p.getDataContainer()[pointKey]?:0}")
-                            sender.sendMessage("玩家${argument}的声望等级为${p.getDataContainer()[levelKey]?:0}")
+                            sender.sendMessage("???${argument}???????????${p.getDataContainer()[pointKey]?:0}")
+                            sender.sendMessage("???${argument}??????????${p.getDataContainer()[levelKey]?:0}")
                         }
                     }
 
@@ -176,16 +180,16 @@ object  DogTag : Plugin() {
         if(e.entity.killer!=null&&e.entity.killer!!.name!=e.entity.name&&e.entity.uniqueId.toString()!=e.killer?.uniqueId.toString()){
             debug("${worldGuardPlugin!=null}")
             if (worldGuardPlugin != null) {
-                var player=e.entity
-                val localPlayer = worldGuardPlugin!!.wrapPlayer(player)
-                debug(player.location.toString())
-                val regions = regionContainer!!.createQuery().getApplicableRegions(player.getLocation())
+                val player=e.entity
+                val localPlayer = WorldGuardPlugin.inst().wrapPlayer(player)
 
-                val keepInventory = regions.queryValue(localPlayer, Flag.SAFE_AREA)
-                debug(keepInventory?.toString()?:"")
-                if (keepInventory != null && keepInventory==true) {
-                    return
-                }
+                debug(player.location.toString())
+                val regions = regionContainer!!.createQuery()
+                val loc: Location = Location(BukkitWorld(player.world), 10.0, 64.0, 100.0)
+
+                val keepInventory = regions.testState(loc, localPlayer, Flag.SAFE_AREA)
+                debug(keepInventory.toString())
+                if (keepInventory) return
             }
           //  debug(baffle.hasNext(e.entity.uniqueId.toString()).toString())
             if(baffle.hasNext(e.entity.uniqueId.toString())){
@@ -198,11 +202,11 @@ object  DogTag : Plugin() {
     }
     val pointKey="dogtag_points"
     val levelKey="dogtag_levels"
-    //右键狗牌获取点数
+    //?????????????
     @SubscribeEvent
     fun onClick(e:PlayerInteractEvent){
         if(e.isRightClick()){
-            var mainhand=e.player.inventory.itemInMainHand
+            val mainhand=e.player.inventory.itemInMainHand
 
             if(dogtag.apply { amount=mainhand.amount } == mainhand){
                 if(!baffle2.hasNext(e.player.name)){
@@ -210,36 +214,36 @@ object  DogTag : Plugin() {
                 }
                 baffle2.next(e.player.name)
                 mainhand.amount=mainhand.amount-1
-                var points= conf.getInt("Points")
-                var p= e.player.getDataContainer()[pointKey]
+                val points= conf.getInt("Points")
+                val p= e.player.getDataContainer()[pointKey]
                 if(p==null){
-                    e.player.getDataContainer()[pointKey] = points//没有这个键
+                    e.player.getDataContainer()[pointKey] = points//????????
                 }
                 else {
-                    e.player.getDataContainer()[pointKey] = p.toInt()+points//有这个键
+                    e.player.getDataContainer()[pointKey] = p.toInt()+points//???????
                 }
-                e.player.sendMessage(message.getString("GET_POINTS","")!!.replace("%amount%",points.toString()).colored())//发送消息，替换占位符
-                //下面判定升级
-                var total= e.player.getDataContainer()[pointKey]!!.toInt()
-                var levels= conf.getConfigurationSection("Levels")!!.getKeys(false).sortedWith(){x,y->
+                e.player.sendMessage(message.getString("GET_POINTS","")!!.replace("%amount%",points.toString()).colored())//??????????滻?λ??
+                //?????ж?????
+                val total= e.player.getDataContainer()[pointKey]!!.toInt()
+                val levels= conf.getConfigurationSection("Levels")!!.getKeys(false).sortedWith(){x,y->
                     return@sortedWith (x.toIntOrNull()?:0)-(y.toIntOrNull()?:0)
                 }
-                var lvlNow=e.player.getDataContainer()[levelKey]?.toInt()?:0//取现在的等级
+                val lvlNow=e.player.getDataContainer()[levelKey]?.toInt()?:0//????????
                 debug("level: ${levels}")
                 for (it in levels) {
-                    var need= conf["Levels.${it}.exp"] as Int
+                    val need= conf["Levels.${it}.exp"] as Int
 
                     if(lvlNow<it.toInt()) {
                         if (need <= total) {
                             e.player.sendMessage(
                                 message.getString("UPGRADE")!!.replace("%level%", it).colored()
-                            )//发送升级消息
-                            e.player.getDataContainer()[levelKey] = it//把等级记入数据库
-                            var cmds= conf.getStringList("Levels.${it}.command")
+                            )//???????????
+                            e.player.getDataContainer()[levelKey] = it//?????????????
+                            val cmds= conf.getStringList("Levels.${it}.command")
                             for (cmd in cmds) {
-                                var tmp=e.player.isOp
+                                val tmp=e.player.isOp
                                 e.player.isOp=true
-                                e.player.performCommand(cmd.replace("[player]",e.player.name))//给玩家执行命令
+                                e.player.performCommand(cmd.replace("[player]",e.player.name))//????????????
                                 e.player.isOp=tmp
                             }
                         }
@@ -255,14 +259,14 @@ object  DogTag : Plugin() {
     }
     @SubscribeEvent
     fun setupData(e: PlayerJoinEvent) {
-        // 初始化玩家容器
+        // ????????????
 
         e.player.setupDataContainer()
 
     }
     @SubscribeEvent
     fun releaseDAta(e: PlayerQuitEvent) {
-        // 释放玩家容器缓存
+        // ??????????????
         e.player.releaseDataContainer()
     }
 }

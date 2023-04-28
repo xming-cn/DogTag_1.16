@@ -18,6 +18,7 @@ taboolib {
     version = "6.0.10-59"
     description{
         dependencies{
+            name("FastAsyncWorldEdit")
             name("WorldGuard")
         }
     }
