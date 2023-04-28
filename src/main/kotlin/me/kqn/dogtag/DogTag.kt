@@ -1,3 +1,5 @@
+@file:Suppress("unused")
+
 package me.kqn.dogtag
 
 import com.sk89q.worldedit.bukkit.BukkitWorld
@@ -38,9 +40,7 @@ import java.util.concurrent.TimeUnit
 import kotlin.math.max
 
 
-object  DogTag : Plugin() {
-
-
+object DogTag : Plugin() {
     private lateinit var dogtag:ItemStack
     private lateinit var baffle: Baffle
     private lateinit var baffle2: Baffle
@@ -57,7 +57,7 @@ object  DogTag : Plugin() {
         FileWatcher.INSTANCE.addSimpleListener(File(confPath)){
             reload()
             onlinePlayers.forEach { if (it.isOp){
-            it.sendMessage("&a?????????".colored())
+            it.sendMessage("&a已自动重载".colored())
             }
             }
         }
@@ -76,14 +76,13 @@ object  DogTag : Plugin() {
         this.worldGuardPlugin = WorldGuardPlugin.inst()
         this.worldGuard = WorldGuard.getInstance()
         val booleanFlag: StateFlag = Flag.SAFE_AREA
-        this.regionContainer = worldGuard!!.platform.regionContainer;
+        this.regionContainer = worldGuard!!.platform.regionContainer
         try {
             if (worldGuard!!.flagRegistry.get("DogTag-Safe-Area") != null) return
             worldGuard!!.flagRegistry.register(booleanFlag)
         } catch (e: Exception) {
             e.printStackTrace()
-            Bukkit.getLogger().warning("[DogTag] WorldGuard not found, some features will not work")
-
+            Bukkit.getLogger().warning("[DogTag] 未开启WorldGuard,安全区功能将不可用")
         }
     }
     private fun  reload(){
@@ -101,37 +100,36 @@ object  DogTag : Plugin() {
                 execute<CommandSender>{
                         sender, _, _ ->
                     submitAsync { reload()
-                    sender.sendMessage("&a???")
+                    sender.sendMessage("&a重载完成")
                     }
                 }
             }
             literal("get"){
-                dynamic ("????"){
+                dynamic ("数量"){
                     execute<Player>{
-                        sender, context, argument ->
+                            sender, _, argument ->
                         if(argument.toIntOrNull()!=null){
                             sender.giveItem(dogtag.clone().apply { amount=argument.toInt() })
                         }
                         else {
-                            sender.sendMessage("&a?????????????????".colored())
+                            sender.sendMessage("&a请输入正确的正整数".colored())
                         }
 
                     }
                 }
             }
             literal("remove"){
-                dynamic ("????"){
-                    dynamic("?????") {
+                dynamic ("数量"){
+                    dynamic("玩家名") {
                         execute<Player> {
                                 sender, context, _ ->
-                            val amt=context.argument(-1).toIntOrNull()?:return@execute
-                            val player=Bukkit.getPlayer(context.argument(0))?:return@execute
+                            val amt= context["数量"].toIntOrNull()?:return@execute
+                            val player=Bukkit.getPlayer(context["玩家名"])?:return@execute
                             debug(amt.toString()+"  "+player.name)
                             val points= player.getDataContainer()[pointKey]?.toInt() ?:return@execute
-                            //var level=player.getDataContainer()[levelKey]?.let{it.toInt()}?:return@execute
                             val newPoints= max(points-amt,0)
-                            var newLevel=0;
-                            val levels= conf.getConfigurationSection("Levels")!!.getKeys(false).sortedWith(){x,y->
+                            var newLevel=0
+                            val levels= conf.getConfigurationSection("Levels")!!.getKeys(false).sortedWith { x, y->
                                 return@sortedWith (x.toIntOrNull()?:0)-(y.toIntOrNull()?:0)
                             }
                             for (key in levels) {
@@ -145,22 +143,22 @@ object  DogTag : Plugin() {
                             }
                             player.getDataContainer()[pointKey]=newPoints
                             player.getDataContainer()[levelKey]=newLevel
-                            sender.sendMessage("&a?????${player.name}??${amt}??????????".colored())
+                            sender.sendMessage("&a已移除 ${player.name} 的 $amt 个荣誉点数".colored())
                         }
                     }
                 }
             }
             literal("points"){
-                dynamic ("?????"){
+                dynamic ("玩家名"){
                     execute<CommandSender>{
                             sender, _, argument ->
                         val p=Bukkit.getPlayer(argument)
                         if(p==null){
-                            sender.sendMessage("??????????")
+                            sender.sendMessage("该玩家不存在")
                         }
                         else {
-                            sender.sendMessage("???${argument}???????????${p.getDataContainer()[pointKey]?:0}")
-                            sender.sendMessage("???${argument}??????????${p.getDataContainer()[levelKey]?:0}")
+                            sender.sendMessage("玩家 $argument 的荣誉点数为 ${p.getDataContainer()[pointKey]?:0}")
+                            sender.sendMessage("玩家 $argument 的声望等级为 ${p.getDataContainer()[levelKey]?:0}")
                         }
                     }
 
@@ -185,13 +183,13 @@ object  DogTag : Plugin() {
 
                 debug(player.location.toString())
                 val regions = regionContainer!!.createQuery()
-                val loc: Location = Location(BukkitWorld(player.world), 10.0, 64.0, 100.0)
+                val loc = Location(BukkitWorld(player.world), 10.0, 64.0, 100.0)
 
                 val keepInventory = regions.testState(loc, localPlayer, Flag.SAFE_AREA)
                 debug(keepInventory.toString())
                 if (keepInventory) return
             }
-          //  debug(baffle.hasNext(e.entity.uniqueId.toString()).toString())
+
             if(baffle.hasNext(e.entity.uniqueId.toString())){
                 baffle.next(e.entity.uniqueId.toString())
                 debug(e.entity.world.name+"  "+e.entity.location.toString())
@@ -200,20 +198,20 @@ object  DogTag : Plugin() {
             }
         }
     }
-    val pointKey="dogtag_points"
-    val levelKey="dogtag_levels"
+    private const val pointKey="dogtag_points"
+    private const val levelKey="dogtag_levels"
     //?????????????
     @SubscribeEvent
     fun onClick(e:PlayerInteractEvent){
         if(e.isRightClick()){
-            val mainhand=e.player.inventory.itemInMainHand
+            val mainHand=e.player.inventory.itemInMainHand
 
-            if(dogtag.apply { amount=mainhand.amount } == mainhand){
+            if(dogtag.apply { amount=mainHand.amount } == mainHand){
                 if(!baffle2.hasNext(e.player.name)){
                     return
                 }
                 baffle2.next(e.player.name)
-                mainhand.amount=mainhand.amount-1
+                mainHand.amount=mainHand.amount-1
                 val points= conf.getInt("Points")
                 val p= e.player.getDataContainer()[pointKey]
                 if(p==null){
@@ -225,11 +223,11 @@ object  DogTag : Plugin() {
                 e.player.sendMessage(message.getString("GET_POINTS","")!!.replace("%amount%",points.toString()).colored())//??????????滻?λ??
                 //?????ж?????
                 val total= e.player.getDataContainer()[pointKey]!!.toInt()
-                val levels= conf.getConfigurationSection("Levels")!!.getKeys(false).sortedWith(){x,y->
+                val levels= conf.getConfigurationSection("Levels")!!.getKeys(false).sortedWith { x, y->
                     return@sortedWith (x.toIntOrNull()?:0)-(y.toIntOrNull()?:0)
                 }
                 val lvlNow=e.player.getDataContainer()[levelKey]?.toInt()?:0//????????
-                debug("level: ${levels}")
+                debug("level: $levels")
                 for (it in levels) {
                     val need= conf["Levels.${it}.exp"] as Int
 
@@ -239,8 +237,8 @@ object  DogTag : Plugin() {
                                 message.getString("UPGRADE")!!.replace("%level%", it).colored()
                             )//???????????
                             e.player.getDataContainer()[levelKey] = it//?????????????
-                            val cmds= conf.getStringList("Levels.${it}.command")
-                            for (cmd in cmds) {
+                            val commands= conf.getStringList("Levels.${it}.command")
+                            for (cmd in commands) {
                                 val tmp=e.player.isOp
                                 e.player.isOp=true
                                 e.player.performCommand(cmd.replace("[player]",e.player.name))//????????????
